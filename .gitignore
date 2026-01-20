@@ -1,0 +1,12 @@
+# .NET
+bin/
+obj/
+
+# Secrets
+appsettings.Development.json
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
