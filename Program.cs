@@ -1,3 +1,8 @@
+using IfsDashboardApi.Repositories;
+using IfsDashboardApi.Repositories.Interfaces;
+using IfsDashboardApi.Services;
+using Microsoft.Extensions.FileProviders;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // 🔹 Controllers + Swagger
@@ -13,7 +18,9 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddScoped<IfsDashboardApi.Services.IfsService>();
+builder.Services.AddScoped<IIfsRepository, IfsRepository>();
+builder.Services.AddScoped<IIfsService, IfsService>();
+builder.Services.AddDirectoryBrowser();
 
 var app = builder.Build();
 
@@ -24,8 +31,14 @@ app.UseSwaggerUI();
 // 🔹 CORS → BURASI ÇOK ÖNEMLİ
 app.UseCors("AllowLocal");
 
-// 🔹 Middleware
-// app.UseHttpsRedirection();
+// 🔹 Static dashboard files
+app.UseDefaultFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    RequestPath = "/ui",
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.Combine(app.Environment.ContentRootPath, "IfsDashboardUI"))
+});
 
 app.UseAuthorization();
 

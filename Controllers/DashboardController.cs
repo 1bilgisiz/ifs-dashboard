@@ -7,21 +7,21 @@ namespace IfsDashboardApi.Controllers
     [Route("api/[controller]")]
     public class DashboardController : ControllerBase
     {
-        private readonly IfsService _ifsService;
+        private readonly IIfsService _ifsService;
 
-        public DashboardController(IfsService ifsService)
+        public DashboardController(IIfsService ifsService)
         {
             _ifsService = ifsService;
         }
 
-        // ✅ Test
+        // Test
         [HttpGet("test")]
         public IActionResult Test()
         {
             return Ok("API çalışıyor 🚀");
         }
 
-        // ✅ PDKS Süreleri
+        // PDKS Süreleri
         [HttpGet("pdks")]
         public async Task<IActionResult> GetPdks(
             [FromQuery] DateTime? baslangic,
@@ -41,7 +41,15 @@ namespace IfsDashboardApi.Controllers
             return Ok(data);
         }
 
+        [HttpGet("uretim/sevkiyatlar")]
+        public async Task<IActionResult> GetSevkiyatlar([FromQuery] DateTime? baslangic, [FromQuery] DateTime? bitis)
+        {
+            var data = await _ifsService.GetSevkiyatlarAsync(baslangic, bitis);
+            return Ok(data);
+        }
+       
 
 
     }
 }
+
