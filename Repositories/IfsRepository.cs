@@ -1,5 +1,6 @@
 using IfsDashboardApi.DTOs;
 using IfsDashboardApi.Repositories.Interfaces;
+using IfsDashboardApi.Repositories.Queries;
 using Oracle.ManagedDataAccess.Client;
 
 namespace IfsDashboardApi.Repositories;
@@ -16,29 +17,7 @@ public class IfsRepository(IConfiguration configuration) : IIfsRepository
         using var conn = new OracleConnection(_connectionString);
         await conn.OpenAsync();
 
-        const string sql = @"
-                SELECT p.emp_no,
-                       c.employee_name,
-                       NVL(c.cf$_isyeri_kodu, 'Bilinmiyor') AS isyeri_kodu,
-                       TO_CHAR(p.tarih, 'DD.MM.YYYY') AS gun,
-                       ROUND(SUM(p.diff_days * 24) - COUNT(DISTINCT p.tarih) * 1, 2) AS toplam_calisma_saat
-                FROM (
-                    SELECT emp_no,
-                           tarih,
-                           islem_adi,
-                           CASE
-                               WHEN islem_adi = 'Cikis' THEN
-                                   (saat - LAG(saat) OVER(PARTITION BY emp_no, tarih ORDER BY saat))
-                           END AS diff_days
-                    FROM ifsapp.trbrd_pdks_hareket
-                    WHERE tarih BETWEEN :pBaslangic AND :pBitis
-                ) p
-                JOIN ifsapp.company_person_all_cfv c
-                  ON p.emp_no = c.emp_no
-                 AND c.free_field2 IN ('MY01')
-                WHERE p.diff_days IS NOT NULL
-                GROUP BY p.emp_no, c.employee_name, NVL(c.cf$_isyeri_kodu, 'Bilinmiyor'), TO_CHAR(p.tarih,'DD.MM.YYYY')
-        ";
+        const string sql = PdksQueries.GetPdksSureleri;
 
         using var cmd = new OracleCommand(sql, conn);
         cmd.BindByName = true;
@@ -69,30 +48,7 @@ public class IfsRepository(IConfiguration configuration) : IIfsRepository
         using var conn = new OracleConnection(_connectionString);
         await conn.OpenAsync();
 
-        const string sql = @"
-                SELECT aa.order_no,
-                       CASE
-                           WHEN SUBSTR(aa.work_center_no, CEIL(LENGTH(aa.work_center_no) / 2), 1) = '1' THEN 'MEKA 1'
-                           WHEN SUBSTR(aa.work_center_no, CEIL(LENGTH(aa.work_center_no) / 2), 1) = '2' THEN 'MEKA 2'
-                           WHEN SUBSTR(aa.work_center_no, CEIL(LENGTH(aa.work_center_no) / 2), 1) = '3' THEN 'MEKA 3'
-                           WHEN SUBSTR(aa.work_center_no, CEIL(LENGTH(aa.work_center_no) / 2), 1) = '4' THEN 'MEKA 4'
-                           WHEN SUBSTR(aa.work_center_no, CEIL(LENGTH(aa.work_center_no) / 2), 1) = 'E' THEN 'MEKA ESK'
-                           ELSE 'Bilinmiyor'
-                       END AS work_center_adi,
-                       SUM(aa.labour_time) AS toplam_emek_suresi
-                  FROM ifsapp.trcost_dist_base_qry aa
-                 WHERE aa.date_applied >= :pBaslangic
-                   AND aa.date_applied <  :pBitisPlus1
-                 GROUP BY aa.order_no,
-                          CASE
-                              WHEN SUBSTR(aa.work_center_no, CEIL(LENGTH(aa.work_center_no) / 2), 1) = '1' THEN 'MEKA 1'
-                              WHEN SUBSTR(aa.work_center_no, CEIL(LENGTH(aa.work_center_no) / 2), 1) = '2' THEN 'MEKA 2'
-                              WHEN SUBSTR(aa.work_center_no, CEIL(LENGTH(aa.work_center_no) / 2), 1) = '3' THEN 'MEKA 3'
-                              WHEN SUBSTR(aa.work_center_no, CEIL(LENGTH(aa.work_center_no) / 2), 1) = '4' THEN 'MEKA 4'
-                              WHEN SUBSTR(aa.work_center_no, CEIL(LENGTH(aa.work_center_no) / 2), 1) = 'E' THEN 'MEKA ESK'
-                              ELSE 'Bilinmiyor'
-                          END
-        ";
+        const string sql = IscilikQueries.GetIscilikSureleri;
 
         using var cmd = new OracleCommand(sql, conn);
         cmd.BindByName = true;
@@ -122,37 +78,7 @@ public class IfsRepository(IConfiguration configuration) : IIfsRepository
         using var conn = new OracleConnection(_connectionString);
         await conn.OpenAsync();
 
-        const string sql = @"
-        SELECT 
-            sh.CONTRACT AS Site,
-            s.SHIPMENT_ID AS Sevkiyat_No,
-            s.SOURCE_REF1 AS Siparis_No,
-            sh.STATE AS Statu,
-            IFSAPP.Shipment_Source_Utility_API.Get_Receiver_Name(sh.RECEIVER_ID, sh.RECEIVER_TYPE_DB) AS Alici,
-            sh.CREATED_DATE AS Kayit_Tarihi,
-            sh.PLANNED_SHIP_DATE AS Planlanan_Sevk_Tarihi,
-            sh.PLANNED_DELIVERY_DATE AS Planli_Teslimat_Tarihi,
-            sh.ACTUAL_SHIP_DATE AS Fiili_Sevk_Tarihi
-        FROM IFSAPP.SHIPMENT_LINE s
-        LEFT JOIN IFSAPP.CUSTOMER_ORDER_LINE co 
-               ON s.SOURCE_REF1 = co.ORDER_NO
-              AND s.SOURCE_REF2 = co.LINE_NO
-              AND s.SOURCE_REF3 = co.REL_NO
-              AND co.CUSTOMER_NO NOT LIKE 'SSH-01'
-        LEFT JOIN IFSAPP.SHIPMENT sh 
-               ON s.SHIPMENT_ID = sh.SHIPMENT_ID
-        LEFT JOIN IFSAPP.SHOP_ORD so 
-               ON co.ORDER_NO = so.ORDER_NO
-              AND co.LINE_NO = so.RELEASE_NO
-              AND co.REL_NO = so.SEQUENCE_NO
-              AND s.SOURCE_REF1 = so.ORDER_NO
-        LEFT JOIN IFSAPP.CUSTOMER_ORDER c
-               ON co.ORDER_NO = c.ORDER_NO
-        WHERE s.SOURCE_REF1 IS NOT NULL
-          AND sh.CREATED_DATE >= :pBaslangic
-          AND sh.CREATED_DATE <  :pBitisPlus1
-        ORDER BY sh.CREATED_DATE DESC
-    ";
+        const string sql = SevkiyatQueries.GetSevkiyatlar;
 
         using var cmd = new OracleCommand(sql, conn);
         cmd.BindByName = true;

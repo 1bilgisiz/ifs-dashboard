@@ -9,7 +9,6 @@ public class IfsService(IIfsRepository repository) : IIfsService
 
     public Task<List<PdksDto>> GetPdksSureleriAsync(DateTime baslangic, DateTime bitis)
     {
-        // Controller zaten default tarihleri sağlıyor; repository'e direkt ilet.
         return _repository.GetPdksSureleriAsync(baslangic, bitis);
     }
 
