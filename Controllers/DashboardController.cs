@@ -14,13 +14,6 @@ namespace IfsDashboardApi.Controllers
             _ifsService = ifsService;
         }
 
-        // Test
-        [HttpGet("test")]
-        public IActionResult Test()
-        {
-            return Ok("API çalışıyor 🚀");
-        }
-
         // PDKS Süreleri
         [HttpGet("pdks")]
         public async Task<IActionResult> GetPdks(

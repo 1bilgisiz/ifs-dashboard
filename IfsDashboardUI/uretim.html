@@ -7,6 +7,7 @@
     <title>IFS Dashboard | Üretim</title>
 
     <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -43,13 +44,26 @@
         <div class="card" style="margin-bottom:14px;">
             <div class="card-header">
                 <div>
+                    <div class="card-title">PDKS ve İşçilik Karşılaştırması</div>
+                    <div class="card-sub">Seçilen tarih aralığına göre PDKS çalışma saatleri ve işçilik süreleri</div>
+                </div>
+            </div>
+            <div class="status">
+                Tarihler üstten seçilir. "Yenile" ile tekrar çekilir.
+            </div>
+            <canvas id="pdksIscilikChart" width="400" height="200"></canvas>
+        </div>
+
+        <div class="card" style="margin-bottom:14px;">
+            <div class="card-header">
+                <div>
                     <div class="card-title">Sevkiyat Listesi</div>
                     <div class="card-sub">Seçilen tarih aralığına göre sevkiyat verisi</div>
                 </div>
                 <span class="badge">Kayıt: <span id="sevkiyatAdet">0</span></span>
             </div>
             <div class="status">
-                Tarihler üstten seçilir. “Yenile” ile tekrar çekilir.
+                Tarihler üstten seçilir. "Yenile" ile tekrar çekilir.
             </div>
         </div>
 
@@ -152,15 +166,104 @@
             }
         }
 
-        // default tarih: son 30 gün
-        const today = new Date();
-        document.getElementById("bitis").value = toISODate(today);
-        document.getElementById("baslangic").value = toISODate(new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000));
+        async function pdksIscilikYukle() {
+            try {
+                const bas = document.getElementById("baslangic").value;
+                const bit = document.getElementById("bitis").value;
 
-        document.getElementById("btnYenile").addEventListener("click", sevkiyatlariYukle);
+                const [pdksData, iscilikData] = await Promise.all([
+                    getJson(`${API_BASE}/api/Dashboard/pdks?baslangic=${bas}&bitis=${bit}`),
+                    getJson(`${API_BASE}/api/Dashboard/iscilik?baslangic=${bas}&bitis=${bit}`)
+                ]);
+
+                // Aggregate PDKS by date
+                const pdksMap = {};
+                pdksData.forEach(item => {
+                    const gun = item.gun;
+                    if (!pdksMap[gun]) pdksMap[gun] = 0;
+                    pdksMap[gun] += item.toplamCalismaSaat;
+                });
+
+                // İşçilik is already aggregated by date and work center, sum per date
+                const iscilikMap = {};
+                iscilikData.forEach(item => {
+                    const tarih = item.tarih;
+                    if (!iscilikMap[tarih]) iscilikMap[tarih] = 0;
+                    iscilikMap[tarih] += item.toplamEmekSuresi;
+                });
+                const allDates = new Set([...Object.keys(pdksMap), ...Object.keys(iscilikMap)]);
+                const sortedDates = Array.from(allDates).sort((a, b) => {
+                    const [d1, m1, y1] = a.split('.').map(Number);
+                    const [d2, m2, y2] = b.split('.').map(Number);
+                    const date1 = new Date(y1, m1 - 1, d1);
+                    const date2 = new Date(y2, m2 - 1, d2);
+                    return date1 - date2;
+                });
+
+                const pdksValues = sortedDates.map(date => pdksMap[date] || 0);
+                const iscilikValues = sortedDates.map(date => iscilikMap[date] || 0);
+
+                if (sortedDates.length === 0) {
+                    console.log('No data for the selected date range');
+                    const ctx = document.getElementById('pdksIscilikChart').getContext('2d');
+                    ctx.font = '20px Arial';
+                    ctx.fillText('Seçilen tarih aralığında veri bulunamadı', 10, 50);
+                    return;
+                }
+
+                // Create chart
+                const ctx = document.getElementById('pdksIscilikChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: sortedDates,
+                        datasets: [{
+                            label: 'PDKS Çalışma Saatleri',
+                            data: pdksValues,
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.1
+                        }, {
+                            label: 'İşçilik Süreleri',
+                            data: iscilikValues,
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'PDKS ve İşçilik Karşılaştırması'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error('Chart yükleme hatası:', err);
+            }
+        }
+
+// default tarih: son 1 yıl
+const today = new Date();
+document.getElementById("bitis").value = toISODate(today);
+document.getElementById("baslangic").value = toISODate(new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()));
+
+        document.getElementById("btnYenile").addEventListener("click", () => {
+            sevkiyatlariYukle();
+            pdksIscilikYukle();
+        });
 
         // ilk açılışta yükle
         sevkiyatlariYukle();
+        pdksIscilikYukle();
     </script>
 </body>
 

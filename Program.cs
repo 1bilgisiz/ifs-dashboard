@@ -20,7 +20,6 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IIfsRepository, IfsRepository>();
 builder.Services.AddScoped<IIfsService, IfsService>();
-builder.Services.AddDirectoryBrowser();
 
 var app = builder.Build();
 

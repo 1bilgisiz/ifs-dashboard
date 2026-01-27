@@ -17,7 +17,7 @@ public class IfsRepository(IConfiguration configuration) : IIfsRepository
         using var conn = new OracleConnection(_connectionString);
         await conn.OpenAsync();
 
-        const string sql = PdksQueries.GetPdksSureleri;
+            const string sql = PdksQueries.GetPdksSureleri;
 
         using var cmd = new OracleCommand(sql, conn);
         cmd.BindByName = true;
@@ -62,7 +62,7 @@ public class IfsRepository(IConfiguration configuration) : IIfsRepository
         {
             liste.Add(new IscilikDto
             {
-                OrderNo = reader.IsDBNull(0) ? "" : reader.GetString(0),
+                Tarih = reader.IsDBNull(0) ? "" : reader.GetString(0),
                 WorkCenterAdi = reader.IsDBNull(1) ? "" : reader.GetString(1),
                 ToplamEmekSuresi = reader.IsDBNull(2) ? 0 : reader.GetDecimal(2)
             });

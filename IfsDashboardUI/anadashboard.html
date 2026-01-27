@@ -7,7 +7,6 @@
     <title>IFS Dashboard</title>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <link rel="stylesheet" href="css/styles.css">
 </head>
 
@@ -31,6 +30,7 @@
             <span id="durum" class="status"></span>
         </div>
     </div>
+
     <div class="nav">
         <a href="anadashboard.html" class="active">PDKS-İşçilik</a>
         <a href="uretim.html">Üretim</a>
@@ -52,12 +52,12 @@
             <div class="kpi">
                 <div class="label">Toplam İşçilik Süresi</div>
                 <div id="kpiIscilikToplam" class="value">-</div>
-                <div class="hint">Endpoint eklenince dolacak</div>
+                <div class="hint">Seçili tarih aralığı</div>
             </div>
             <div class="kpi">
-                <div class="label">İş Emri Sayısı</div>
-                <div id="kpiOrder" class="value">-</div>
-                <div class="hint">Endpoint eklenince dolacak</div>
+                <div class="label">Work Center Sayısı</div>
+                <div id="kpiWorkCenter" class="value">-</div>
+                <div class="hint">İşçilik datasından</div>
             </div>
         </div>
 
@@ -90,60 +90,38 @@
                         <canvas id="chartIsyeriPdks"></canvas>
                     </div>
                 </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <div>
-                            <div class="card-title">En Yüksek 10 Çalışan (PDKS Saat)</div>
-                            <div class="card-sub">Toplam çalışma süresine göre</div>
-                        </div>
-                        <span class="pill">Top 10</span>
-                    </div>
-
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>EmpNo</th>
-                                <th>Ad Soyad</th>
-                                <th>İşyeri</th>
-                                <th style="text-align:right">Saat</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tblTop10">
-                            <!-- JS dolduracak -->
-                        </tbody>
-                    </table>
-                </div>
             </div>
         </div>
 
-        <!-- Second row for İşçilik -->
-        <div class="charts">
-            <div class="card">
+        <!-- İşçilik + PDKS aynı grafikte (BÜYÜK) + Notlar (KÜÇÜK) -->
+        <div class="charts charts-big">
+            <div class="card card-big">
                 <div class="card-header">
                     <div>
-                        <div class="card-title">İşçilik Süreleri (İşyeri / Work Center)</div>
-                        <div class="card-sub">Endpoint eklenince otomatik dolacak</div>
+                        <div class="card-title">İşyeri Bazlı PDKS ve İşçilik (Tarih Serisi)</div>
+                        <div class="card-sub">PDKS (düz) + İşçilik (kesikli) aynı tarihte gösterilir</div>
                     </div>
-                    <span class="pill">İşçilik</span>
+                    <span class="pill">PDKS + İşçilik</span>
                 </div>
-                <div class="chart-wrap">
+                <div class="chart-wrap chart-wrap-big">
                     <canvas id="chartIscilik"></canvas>
                 </div>
             </div>
 
-            <div class="card">
+            <div class="card card-notes">
                 <div class="card-header">
                     <div>
-                        <div class="card-title">Notlar / Filtreler</div>
-                        <div class="card-sub">Dashboard genişletme alanı</div>
+                        <div class="card-title">Notlar</div>
+                        <div class="card-sub">Özet / Hata</div>
                     </div>
-                    <span class="pill">Opsiyonel</span>
+                    <span class="pill">Durum</span>
                 </div>
-                <div class="status">
-                    ✅ Şu an PDKS verisi API’den geliyor.<br />
-                    ⏭️ Sıradaki adım: İşçilik endpoint’i eklemek ve bu grafiğe bağlamak.<br />
-                    🔧 İstersen buraya “MY01 / fabrika / departman” filtreleri ekleriz.
+
+                <div id="notlar" class="status status-compact">
+                    ✅ PDKS + İşçilik ayrı endpoint<br />
+                    🔎 İşçilik tarih bazlı<br />
+                    ⚠️ Sadece MEKA 1-4, ESK<br />
+                    📊 PDKS düz / İşçilik kesikli
                 </div>
             </div>
         </div>
@@ -158,11 +136,26 @@
 
         function setDurum(msg) { document.getElementById("durum").textContent = msg; }
 
+        // ✅ Notlar uzamasın: en üste ekle + max satır gibi davranır (scroll)
+        function setNot(msg) {
+            const el = document.getElementById("notlar");
+            el.innerHTML = `⚠️ ${msg}<br/>` + el.innerHTML;
+        }
+
         function toISODate(d) {
             const yyyy = d.getFullYear();
             const mm = String(d.getMonth() + 1).padStart(2, '0');
             const dd = String(d.getDate()).padStart(2, '0');
             return `${yyyy}-${mm}-${dd}`;
+        }
+
+        // "01.01.2025" -> Date
+        function parseTrDate(s) {
+            if (!s) return null;
+            const parts = String(s).split(".");
+            if (parts.length !== 3) return null;
+            const [dd, mm, yyyy] = parts.map(x => parseInt(x, 10));
+            return new Date(yyyy, mm - 1, dd);
         }
 
         function formatSaat(x) {
@@ -180,57 +173,73 @@
         }
 
         function destroyIfExists(chart) {
-            if (chart) { chart.destroy(); }
+            if (chart) chart.destroy();
             return null;
         }
 
-        function fillTop10(rows) {
-            const tbody = document.getElementById("tblTop10");
-            tbody.innerHTML = "";
+        function isyeriFromWorkCenterAdi(workCenterAdi) {
+            const wc = (workCenterAdi ?? "").toUpperCase();
+            if (wc.includes("MEKA 1")) return "MEKA 1";
+            if (wc.includes("MEKA 2")) return "MEKA 2";
+            if (wc.includes("MEKA 3")) return "MEKA 3";
+            if (wc.includes("MEKA 4")) return "MEKA 4";
+            if (wc.includes("MEKA ESK")) return "MEKA ESK";
+            return "Bilinmiyor";
+        }
 
-            for (const r of rows) {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-          <td>${r.empNo ?? ""}</td>
-          <td>${r.employeeName ?? ""}</td>
-          <td>${r.isyeriKodu ?? ""}</td>
-          <td style="text-align:right">${formatSaat(r.toplamCalismaSaat)}</td>
-        `;
-                tbody.appendChild(tr);
-            }
+        function getColorForIsyeri(isyeri, tip, alpha = 1) {
+            const renkler = {
+                "MEKA 1": [31, 182, 255],
+                "MEKA 2": [34, 197, 94],
+                "MEKA 3": [168, 85, 247],
+                "MEKA 4": [245, 158, 11],
+                "MEKA ESK": [239, 68, 68],
+                "Bilinmiyor": [148, 163, 184],
+            };
+            const rgb = renkler[isyeri] ?? renkler["Bilinmiyor"];
+            return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
         }
 
         async function yenile() {
             try {
                 setDurum("Veriler çekiliyor…");
+                let baslangic = document.getElementById("baslangic").value;
+                let bitis = document.getElementById("bitis").value;
 
-                const baslangic = document.getElementById("baslangic").value;
-                const bitis = document.getElementById("bitis").value;
+                if (!bitis) bitis = toISODate(new Date());
+                if (!baslangic) baslangic = toISODate(new Date(new Date().setDate(new Date().getDate() - 7)));
 
-                const pdksUrl = `${API_BASE}/api/Dashboard/pdks?baslangic=${baslangic}&bitis=${bitis}`;
-                const pdks = await getJson(pdksUrl);
+                const pdksUrl = `${API_BASE}/api/Dashboard/pdks?baslangic=${encodeURIComponent(baslangic)}&bitis=${encodeURIComponent(bitis)}`;
+                const iscilikUrl = `${API_BASE}/api/Dashboard/iscilik?baslangic=${encodeURIComponent(baslangic)}&bitis=${encodeURIComponent(bitis)}`;
 
-                // KPI
+                const [pdks, iscilik] = await Promise.all([getJson(pdksUrl), getJson(iscilikUrl)]);
+
+                // KPI - PDKS
                 const pdksToplam = pdks.reduce((acc, x) => acc + Number(x.toplamCalismaSaat ?? 0), 0);
                 document.getElementById("kpiPdksToplam").textContent = formatSaat(pdksToplam);
-                document.getElementById("kpiPdksKayit").textContent = pdks.length.toLocaleString("tr-TR");
+                document.getElementById("kpiPdksKayit").textContent = (pdks?.length ?? 0).toLocaleString("tr-TR");
 
-                // 1) Günlük toplam (gun -> toplam)
+                // KPI - İşçilik
+                const isToplam = iscilik.reduce((a, b) => a + Number(b.toplamEmekSuresi ?? 0), 0);
+                document.getElementById("kpiIscilikToplam").textContent = formatSaat(isToplam);
+
+                const wcSet = new Set(iscilik.map(x => x.workCenterAdi).filter(Boolean));
+                document.getElementById("kpiWorkCenter").textContent = wcSet.size.toLocaleString("tr-TR");
+
+                // 1) Günlük toplam PDKS
                 const gunMap = {};
                 for (const x of pdks) {
                     const g = x.gun;
                     gunMap[g] = (gunMap[g] ?? 0) + Number(x.toplamCalismaSaat ?? 0);
                 }
-                const gunLabels = Object.keys(gunMap);
-                const gunValues = Object.values(gunMap);
+
+                const gunLabels = Object.keys(gunMap).sort((a, b) => (parseTrDate(a) - parseTrDate(b)));
+                const gunValues = gunLabels.map(g => gunMap[g]);
 
                 chartGunlukPdks = destroyIfExists(chartGunlukPdks);
                 chartGunlukPdks = new Chart(document.getElementById("chartGunlukPdks"), {
                     type: "bar",
-                    data: {
-                        labels: gunLabels,
-                        datasets: [{ label: "Toplam Saat", data: gunValues }]
-                    },
+                    data: { labels: gunLabels, datasets: [{ label: "Toplam Saat", data: gunValues }] },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
@@ -242,7 +251,7 @@
                     }
                 });
 
-                // 2) İşyeri dağılımı
+                // 2) İşyeri dağılımı (PDKS)
                 const isyeriMap = {};
                 for (const x of pdks) {
                     const k = x.isyeriKodu ?? "Bilinmiyor";
@@ -254,81 +263,114 @@
                 chartIsyeriPdks = destroyIfExists(chartIsyeriPdks);
                 chartIsyeriPdks = new Chart(document.getElementById("chartIsyeriPdks"), {
                     type: "doughnut",
-                    data: {
-                        labels: isyeriLabels,
-                        datasets: [{ data: isyeriValues }]
-                    },
+                    data: { labels: isyeriLabels, datasets: [{ data: isyeriValues }] },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: "right", labels: { color: "rgba(232,240,255,.75)" } } }
+                    }
+                });
+
+                // 3) PDKS + İşçilik tarih serisi (işyeri bazlı)
+                const tarihMap = new Map();
+
+                // PDKS ekle
+                for (const x of pdks) {
+                    const tarih = x.gun;
+                    const isyeri = x.isyeriKodu ?? "Bilinmiyor";
+
+                    if (!tarihMap.has(tarih)) tarihMap.set(tarih, {});
+                    if (!tarihMap.get(tarih)[isyeri]) tarihMap.get(tarih)[isyeri] = { pdks: 0, iscilik: 0 };
+
+                    tarihMap.get(tarih)[isyeri].pdks += Number(x.toplamCalismaSaat ?? 0);
+                }
+
+                // İşçilik ekle
+                for (const x of iscilik) {
+                    const tarih = x.tarih;
+                    const isyeri = isyeriFromWorkCenterAdi(x.workCenterAdi);
+
+                    if (!tarihMap.has(tarih)) tarihMap.set(tarih, {});
+                    if (!tarihMap.get(tarih)[isyeri]) tarihMap.get(tarih)[isyeri] = { pdks: 0, iscilik: 0 };
+
+                    tarihMap.get(tarih)[isyeri].iscilik += Number(x.toplamEmekSuresi ?? 0);
+                }
+
+                const tumTarihler = Array.from(tarihMap.keys()).sort((a, b) => parseTrDate(a) - parseTrDate(b));
+
+                const tumIsyerleri = new Set();
+                for (const isyeriData of tarihMap.values()) {
+                    Object.keys(isyeriData).forEach(isyeri => tumIsyerleri.add(isyeri));
+                }
+
+                const datasets = [];
+
+                for (const isyeri of tumIsyerleri) {
+                    const pdksValues = tumTarihler.map(t => (tarihMap.get(t)?.[isyeri]?.pdks) ?? 0);
+                    const iscilikValues = tumTarihler.map(t => (tarihMap.get(t)?.[isyeri]?.iscilik) ?? 0);
+
+                    datasets.push({
+                        label: `${isyeri} - PDKS`,
+                        data: pdksValues,
+                        borderColor: getColorForIsyeri(isyeri, 'pdks', 1),
+                        backgroundColor: getColorForIsyeri(isyeri, 'pdks', 0.10),
+                        tension: 0.35,
+                        fill: false,
+                        pointRadius: 2,
+                        pointHoverRadius: 5
+                    });
+
+                    datasets.push({
+                        label: `${isyeri} - İşçilik`,
+                        data: iscilikValues,
+                        borderColor: getColorForIsyeri(isyeri, 'iscilik', 1),
+                        backgroundColor: getColorForIsyeri(isyeri, 'iscilik', 0.10),
+                        tension: 0.35,
+                        fill: false,
+                        pointRadius: 2,
+                        pointHoverRadius: 5,
+                        borderDash: [6, 6]
+                    });
+                }
+
+                chartIscilik = destroyIfExists(chartIscilik);
+                chartIscilik = new Chart(document.getElementById("chartIscilik"), {
+                    type: "line",
+                    data: { labels: tumTarihler, datasets },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: {
-                                position: "right",
-                                labels: { color: "rgba(232,240,255,.75)" }
+                            legend: { position: 'top', labels: { color: "rgba(232,240,255,.75)" } },
+                            title: {
+                                display: true,
+                                text: 'İş Yeri Bazlı PDKS (Düz) + İşçilik (Kesikli)',
+                                color: "rgba(232,240,255,.9)",
+                                font: { size: 14 }
                             }
-                        }
+                        },
+                        scales: {
+                            x: { ticks: { color: "rgba(232,240,255,.7)" }, grid: { color: "rgba(255,255,255,.06)" } },
+                            y: { ticks: { color: "rgba(232,240,255,.7)" }, grid: { color: "rgba(255,255,255,.06)" } }
+                        },
+                        interaction: { intersect: false, mode: 'index' }
                     }
                 });
-
-                // 3) Top 10 çalışan
-                const empMap = {};
-                for (const x of pdks) {
-                    const key = (x.empNo ?? "") + "|" + (x.employeeName ?? "") + "|" + (x.isyeriKodu ?? "");
-                    if (!empMap[key]) {
-                        empMap[key] = { empNo: x.empNo, employeeName: x.employeeName, isyeriKodu: x.isyeriKodu, toplamCalismaSaat: 0 };
-                    }
-                    empMap[key].toplamCalismaSaat += Number(x.toplamCalismaSaat ?? 0);
-                }
-                const top10 = Object.values(empMap)
-                    .sort((a, b) => b.toplamCalismaSaat - a.toplamCalismaSaat)
-                    .slice(0, 10);
-
-                fillTop10(top10);
-
-                try {
-                    const iscilikUrl = `${API_BASE}/api/Dashboard/iscilik?baslangic=${baslangic}&bitis=${bitis}`;
-                    const iscilik = await getJson(iscilikUrl);
-                    const isLabels = iscilik.map(x => x.workCenterAdi ?? x.work_center_adi ?? "Bilinmiyor");
-                    const isValues = iscilik.map(x => Number(x.toplamEmekSuresi ?? x.toplam_emek_suresi ?? 0));
-
-                    const isToplam = isValues.reduce((a, b) => a + b, 0);
-                    document.getElementById("kpiIscilikToplam").textContent = formatSaat(isToplam);
-
-                    // order sayısı varsa:
-                    const orderSet = new Set(iscilik.map(x => x.orderNo ?? x.order_no).filter(Boolean));
-                    document.getElementById("kpiOrder").textContent = orderSet.size.toLocaleString("tr-TR");
-
-                    chartIscilik = destroyIfExists(chartIscilik);
-                    chartIscilik = new Chart(document.getElementById("chartIscilik"), {
-                        type: "bar",
-                        data: { labels: isLabels, datasets: [{ label: "Toplam İşçilik", data: isValues }] },
-                        options: {
-                            responsive: true, maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                x: { ticks: { color: "rgba(232,240,255,.7)" }, grid: { color: "rgba(255,255,255,.06)" } },
-                                y: { ticks: { color: "rgba(232,240,255,.7)" }, grid: { color: "rgba(255,255,255,.06)" } }
-                            }
-                        }
-                    });
-                } catch (e) {
-                    document.getElementById("kpiIscilikToplam").textContent = "-";
-                    document.getElementById("kpiOrder").textContent = "-";
-                }
 
                 setDurum("Güncel ✅");
             } catch (err) {
                 console.error(err);
                 setDurum("Hata: " + err.message);
+                setNot(err.message);
             }
         }
 
+        // default tarih: son 15 gün
         const today = new Date();
         document.getElementById("bitis").value = toISODate(today);
-        document.getElementById("baslangic").value = toISODate(new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000));
+        document.getElementById("baslangic").value = toISODate(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 14));
 
         document.getElementById("btnYenile").addEventListener("click", yenile);
-
         yenile();
     </script>
 </body>
