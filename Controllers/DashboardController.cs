@@ -40,9 +40,14 @@ namespace IfsDashboardApi.Controllers
             var data = await _ifsService.GetSevkiyatlarAsync(baslangic, bitis);
             return Ok(data);
         }
-       
 
 
+        [HttpGet("ik/aktif-personel")]
+        public async Task<IActionResult> GetAktifPersonel()
+        {
+            var data = await _ifsService.GetAktifPersonelAsync();
+            return Ok(data);
+        }
     }
 }
 

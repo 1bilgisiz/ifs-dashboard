@@ -36,6 +36,7 @@
         <div class="nav">
             <a href="anadashboard.html">PDKS-İşçilik</a>
             <a href="uretim.html" class="active">Üretim</a>
+            <a href="ik.html" class="">İnsan Kaynakları</a>
         </div>
     </div>
 
@@ -176,7 +177,6 @@
                     getJson(`${API_BASE}/api/Dashboard/iscilik?baslangic=${bas}&bitis=${bit}`)
                 ]);
 
-                // Aggregate PDKS by date
                 const pdksMap = {};
                 pdksData.forEach(item => {
                     const gun = item.gun;

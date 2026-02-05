@@ -17,7 +17,7 @@ public class IfsRepository(IConfiguration configuration) : IIfsRepository
         using var conn = new OracleConnection(_connectionString);
         await conn.OpenAsync();
 
-            const string sql = PdksQueries.GetPdksSureleri;
+        const string sql = PdksQueries.GetPdksSureleri;
 
         using var cmd = new OracleCommand(sql, conn);
         cmd.BindByName = true;
@@ -104,6 +104,47 @@ public class IfsRepository(IConfiguration configuration) : IIfsRepository
             });
         }
 
+        return liste;
+    }
+
+    public async Task<List<PersonelDto>> GetAktifPersonelAsync()
+    {
+        var liste = new List<PersonelDto>();
+
+        using var conn = new OracleConnection(_connectionString);
+        await conn.OpenAsync();
+
+        const string sql = IKQueries.AktifPersonelListesi;
+
+        using var cmd = new OracleCommand(sql, conn);
+        cmd.BindByName = true;
+
+        using var reader = await cmd.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            liste.Add(new PersonelDto
+            {
+                Sirket = reader.IsDBNull(0) ? "" : reader.GetString(0),
+                IsyeriKodu = reader.IsDBNull(1) ? "" : reader.GetString(1),
+                No = reader.IsDBNull(2) ? "" : reader.GetValue(2).ToString()!,
+                Tc = reader.IsDBNull(3) ? "" : reader.GetString(3),
+                AdSoyad = reader.IsDBNull(4) ? "" : reader.GetString(4),
+                GrupKodu = reader.IsDBNull(5) ? "" : reader.GetString(5),
+                GrupKoduIk = reader.IsDBNull(6) ? "" : reader.GetString(6),
+                IlkIseGirisTarihi = reader.IsDBNull(7) ? (DateTime?)null : reader.GetDateTime(7),
+                IstenCikisTarihi = reader.IsDBNull(8) ? (DateTime?)null : reader.GetDateTime(8),
+                Yas = reader.IsDBNull(9) ? 0 : Convert.ToInt32(reader.GetValue(9)),
+                Telefon = reader.IsDBNull(10) ? "" : reader.GetString(10),
+                Adres = reader.IsDBNull(11) ? "" : reader.GetString(11),
+                KanGrubu = reader.IsDBNull(12) ? "" : reader.GetString(12),
+                Cinsiyet = reader.IsDBNull(13) ? "" : reader.GetString(13),
+                Departman = reader.IsDBNull(14) ? "" : reader.GetString(14),
+                Pozisyon = reader.IsDBNull(15) ? "" : reader.GetString(15),
+                Unvan = reader.IsDBNull(16) ? "" : reader.GetString(16),
+                Tahsil = reader.IsDBNull(17) ? "" : reader.GetString(17),
+            });
+        }
         return liste;
     }
 }

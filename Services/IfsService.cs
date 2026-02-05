@@ -25,4 +25,9 @@ public class IfsService(IIfsRepository repository) : IIfsService
         var t = bitis ?? DateTime.Today;
         return _repository.GetSevkiyatlarAsync(b, t);
     }
+    public async Task<List<PersonelDto>> GetAktifPersonelAsync()
+    {
+        return await _repository.GetAktifPersonelAsync();
+    }
+
 }

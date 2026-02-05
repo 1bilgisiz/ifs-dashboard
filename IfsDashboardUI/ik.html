@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="tr">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>İnsan Kaynakları</title>
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+
+<body>
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+        <div class="brand">
+            <div class="title">MEKA: Kırma Eleme ve Beton Santrali Teknolojileri</div>
+            <div class="sub">İnsan Kaynakları | Canlı veri (IFS Oracle)</div>
+        </div>
+        <div class="filters">
+            <button id="ik_yenile" type="button">Yenile</button>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <!-- NAV -->
+        <div class="nav">
+            <a href="anadashboard.html">PDKS-İşçilik</a>
+            <a href="uretim.html">Üretim</a>
+            <a href="ik.html" class="active">İnsan Kaynakları</a>
+        </div>
+
+        <!-- KPI -->
+        <div class="kpi-row">
+            <div class="kpi">
+                <div class="label">Toplam Personel</div>
+                <div class="value" id="ik_toplam">-</div>
+                <div class="hint">Aktif personel</div>
+            </div>
+            <div class="kpi">
+                <div class="label">Departman Sayısı</div>
+                <div class="value" id="ik_departman_sayisi">-</div>
+                <div class="hint">Benzersiz</div>
+            </div>
+            <div class="kpi">
+                <div class="label">İşyeri Sayısı</div>
+                <div class="value" id="ik_isyeri_sayisi">-</div>
+                <div class="hint">MEKA 1/2/4 vb.</div>
+            </div>
+            <div class="kpi">
+                <div class="label">Yaş Ortalaması</div>
+                <div class="value" id="ik_yas_ort">-</div>
+                <div class="hint">Ortalama</div>
+            </div>
+        </div>
+
+        <!-- CHARTS -->
+        <div class="charts">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">İşyeri Bazlı Çalışan Sayısı</div>
+                        <div class="card-sub">Aktif personel dağılımı</div>
+                    </div>
+                    <span class="pill" id="ik_isyeri_chart_info">-</span>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="ik_isyeri_chart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">Departman Bazlı Çalışan (Top 10)</div>
+                        <div class="card-sub">En kalabalık departmanlar</div>
+                    </div>
+                    <span class="pill" id="ik_dep_chart_info">-</span>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="ik_dep_chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLE + NOTES -->
+        <div class="grid">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">Aktif Personel Listesi</div>
+                        <div class="card-sub">Arama / departman filtre</div>
+                    </div>
+                    <span class="pill" id="ik_durum">Hazır</span>
+                </div>
+
+                <div class="filters" style="align-items:center;">
+                    <label style="min-width:260px;">
+                        Ara
+                        <input id="ik_ara" type="text" placeholder="Ad, no, departman..." />
+                    </label>
+
+                    <label style="min-width:260px;">
+                        Departman
+                        <select id="ik_departman"
+                            style="height:40px;border-radius:10px;padding:9px 10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);">
+                            <option value="">Tümü</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="table-wrap" style="margin-top:10px;">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Ad Soyad</th>
+                                <th>İşyeri</th>
+                                <th>Departman</th>
+                                <th>Pozisyon</th>
+                                <th>Grup</th>
+                                <th>İlk İşe Giriş</th>
+                                <th>Yaş</th>
+                                <th>Telefon</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ik_tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card card-notes">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">Notlar</div>
+                        <div class="card-sub">İK</div>
+                    </div>
+                    <span class="pill">Durum</span>
+                </div>
+
+                <div class="status-compact">
+                    ✅ Endpoint: <code>/api/Dashboard/ik/aktif-personel</code><br />
+                    ✅ Analiz: İşyeri & Departman dağılımı<br />
+                    ✅ Filtre: Arama + Departman
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- LIB -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- SCRIPT -->
+    <script>
+        const IK_ENDPOINT = "http://localhost:5151/api/Dashboard/ik/aktif-personel";
+
+        let ikVeri = [];
+        let isyeriChart = null;
+        let depChart = null;
+
+        const n = s => (s ?? "").toString().toLowerCase().trim();
+        const fmt = v => v ? String(v).split("T")[0].split("-").reverse().join(".") : "";
+
+        function setDurum(t) { document.getElementById("ik_durum").textContent = t; }
+
+        function groupCount(arr, keyFn) {
+            const m = new Map();
+            for (const it of arr) {
+                const k = keyFn(it) || "Bilinmiyor";
+                m.set(k, (m.get(k) || 0) + 1);
+            }
+            return [...m.entries()].sort((a, b) => b[1] - a[1]);
+        }
+
+        function drawBar(canvasId, labels, values, old) {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return old;
+            if (old) old.destroy();
+            return new Chart(ctx, {
+                type: "bar",
+                data: { labels, datasets: [{ label: "Çalışan", data: values }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: "#e8f0ff" }, grid: { color: "rgba(255,255,255,.06)" } },
+                        y: { ticks: { color: "#e8f0ff" }, grid: { color: "rgba(255,255,255,.06)" } }
+                    }
+                }
+            });
+        }
+
+        function ozet(data) {
+            document.getElementById("ik_toplam").textContent = data.length;
+            document.getElementById("ik_departman_sayisi").textContent =
+                new Set(data.map(x => x.departman ?? x.Departman).filter(Boolean)).size;
+            document.getElementById("ik_isyeri_sayisi").textContent =
+                new Set(data.map(x => x.isyeriKodu ?? x.IsyeriKodu.toggle).filter(Boolean)).size;
+
+            const yaslar = data.map(x => Number(x.yas ?? x.Yas ?? 0)).filter(x => x > 0 && !Number.isNaN(x));
+            const ort = yaslar.length ? yaslar.reduce((a, b) => a + b, 0) / yaslar.length : 0;
+            document.getElementById("ik_yas_ort").textContent = ort ? ort.toFixed(1) : "-";
+        }
+
+        function grafikler(data) {
+            const isy = groupCount(data, x => x.isyeriKodu ?? x.IsyeriKodu);
+            document.getElementById("ik_isyeri_chart_info").textContent = `${isy.length} işyeri`;
+            isyeriChart = drawBar("ik_isyeri_chart", isy.map(x => x[0]), isy.map(x => x[1]), isyeriChart);
+
+            const dep = groupCount(data, x => x.departman ?? x.Departman).slice(0, 10);
+            document.getElementById("ik_dep_chart_info").textContent = `Top ${dep.length}`;
+            depChart = drawBar("ik_dep_chart", dep.map(x => x[0]), dep.map(x => x[1]), depChart);
+        }
+
+        function departmanDoldur(data) {
+            const el = document.getElementById("ik_departman");
+            const deps = [...new Set(data.map(x => x.departman ?? x.Departman).filter(Boolean))]
+                .sort((a, b) => a.localeCompare(b));
+            el.innerHTML = `<option value="">Tümü</option>` + deps.map(d => `<option value="${d}">${d}</option>`).join("");
+        }
+
+        function tablo(data) {
+            const tb = document.getElementById("ik_tbody");
+            tb.innerHTML = data.map(x => `
+        <tr>
+          <td>${x.no ?? x.No ?? ""}</td>
+          <td>${x.adSoyad ?? x.AdSoyad ?? ""}</td>
+          <td>${x.isyeriKodu ?? x.IsyeriKodu ?? ""}</td>
+          <td>${x.departman ?? x.Departman ?? ""}</td>
+          <td>${x.pozisyon ?? x.Pozisyon ?? ""}</td>
+          <td>${x.grupKoduIk ?? x.GrupKoduIk ?? x.grupKodu ?? x.GrupKodu ?? ""}</td>
+          <td>${fmt(x.ilkIseGirisTarihi ?? x.IlkIseGirisTarihi)}</td>
+          <td>${x.yas ?? x.Yas ?? ""}</td>
+          <td>${x.telefon ?? x.Telefon ?? ""}</td>
+        </tr>
+      `).join("");
+        }
+
+        function filtrele() {
+            const q = n(document.getElementById("ik_ara").value);
+            const dep = document.getElementById("ik_departman").value;
+            let d = ikVeri;
+            if (dep) d = d.filter(x => (x.departman ?? x.Departman) === dep);
+            if (q) {
+                d = d.filter(x => {
+                    const blob = [
+                        x.no, x.No, x.tc, x.Tc, x.adSoyad, x.AdSoyad,
+                        x.isyeriKodu, x.IsyeriKodu, x.departman, x.Departman,
+                        x.pozisyon, x.Pozisyon, x.grupKodu, x.GrupKodu,
+                        x.grupKoduIk, x.GrupKoduIk, x.telefon, x.Telefon
+                    ].map(n).join(" ");
+                    return blob.includes(q);
+                });
+            }
+            setDurum(`${d.length} kayıt`);
+            tablo(d);
+        }
+
+        async function yukle() {
+            try {
+                setDurum("Çekiliyor...");
+                const r = await fetch(IK_ENDPOINT);
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                ikVeri = await r.json();
+                ozet(ikVeri);
+                departmanDoldur(ikVeri);
+                grafikler(ikVeri);
+                filtrele();
+            } catch (e) {
+                console.error(e);
+                setDurum("Hata");
+            }
+        }
+
+        document.getElementById("ik_yenile").addEventListener("click", yukle);
+        document.getElementById("ik_ara").addEventListener("input", filtrele);
+        document.getElementById("ik_departman").addEventListener("change", filtrele);
+
+        yukle();
+    </script>
+
+</body>
+
+</html>
