@@ -3,50 +3,57 @@
 
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>İnsan Kaynakları</title>
+
     <link rel="stylesheet" href="css/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
 
-    <!-- TOP BAR -->
+    <!-- ================= TOPBAR ================= -->
     <div class="topbar">
         <div class="brand">
             <div class="title">MEKA: Kırma Eleme ve Beton Santrali Teknolojileri</div>
             <div class="sub">İnsan Kaynakları | Canlı veri (IFS Oracle)</div>
         </div>
+
         <div class="filters">
             <button id="ik_yenile" type="button">Yenile</button>
+            <span id="ik_durum" class="status">Hazır</span>
         </div>
     </div>
 
-    <div class="container">
-
-        <!-- NAV -->
+    <div class="nav-wrap">
         <div class="nav">
             <a href="anadashboard.html">PDKS-İşçilik</a>
             <a href="uretim.html">Üretim</a>
             <a href="ik.html" class="active">İnsan Kaynakları</a>
         </div>
+    </div>
 
-        <!-- KPI -->
+    <div class="container">
+
         <div class="kpi-row">
             <div class="kpi">
                 <div class="label">Toplam Personel</div>
                 <div class="value" id="ik_toplam">-</div>
                 <div class="hint">Aktif personel</div>
             </div>
+
             <div class="kpi">
                 <div class="label">Departman Sayısı</div>
                 <div class="value" id="ik_departman_sayisi">-</div>
                 <div class="hint">Benzersiz</div>
             </div>
+
             <div class="kpi">
                 <div class="label">İşyeri Sayısı</div>
                 <div class="value" id="ik_isyeri_sayisi">-</div>
-                <div class="hint">MEKA 1/2/4 vb.</div>
+                <div class="hint">MEKA 1 / 2 / 3 / 4</div>
             </div>
+
             <div class="kpi">
                 <div class="label">Yaş Ortalaması</div>
                 <div class="value" id="ik_yas_ort">-</div>
@@ -54,7 +61,7 @@
             </div>
         </div>
 
-        <!-- CHARTS -->
+
         <div class="charts">
             <div class="card">
                 <div class="card-header">
@@ -82,8 +89,8 @@
                 </div>
             </div>
         </div>
+        <br />
 
-        <!-- TABLE + NOTES -->
         <div class="grid">
             <div class="card">
                 <div class="card-header">
@@ -91,7 +98,7 @@
                         <div class="card-title">Aktif Personel Listesi</div>
                         <div class="card-sub">Arama / departman filtre</div>
                     </div>
-                    <span class="pill" id="ik_durum">Hazır</span>
+                    <span class="pill" id="ik_durum_pill">-</span>
                 </div>
 
                 <div class="filters" style="align-items:center;">
@@ -148,10 +155,6 @@
 
     </div>
 
-    <!-- LIB -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- SCRIPT -->
     <script>
         const IK_ENDPOINT = "http://localhost:5151/api/Dashboard/ik/aktif-personel";
 
@@ -162,31 +165,29 @@
         const n = s => (s ?? "").toString().toLowerCase().trim();
         const fmt = v => v ? String(v).split("T")[0].split("-").reverse().join(".") : "";
 
-        function setDurum(t) { document.getElementById("ik_durum").textContent = t; }
+        function setDurum(t) {
+            document.getElementById("ik_durum").textContent = t;
+            document.getElementById("ik_durum_pill").textContent = t;
+        }
 
         function groupCount(arr, keyFn) {
             const m = new Map();
-            for (const it of arr) {
-                const k = keyFn(it) || "Bilinmiyor";
+            arr.forEach(x => {
+                const k = keyFn(x) || "Bilinmiyor";
                 m.set(k, (m.get(k) || 0) + 1);
-            }
+            });
             return [...m.entries()].sort((a, b) => b[1] - a[1]);
         }
 
-        function drawBar(canvasId, labels, values, old) {
-            const ctx = document.getElementById(canvasId);
-            if (!ctx) return old;
-            if (old) old.destroy();
-            return new Chart(ctx, {
+        function drawBar(id, labels, values, oldChart) {
+            if (oldChart) oldChart.destroy();
+            return new Chart(document.getElementById(id), {
                 type: "bar",
                 data: { labels, datasets: [{ label: "Çalışan", data: values }] },
                 options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { ticks: { color: "#e8f0ff" }, grid: { color: "rgba(255,255,255,.06)" } },
-                        y: { ticks: { color: "#e8f0ff" }, grid: { color: "rgba(255,255,255,.06)" } }
-                    }
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
                 }
             });
         }
@@ -196,9 +197,9 @@
             document.getElementById("ik_departman_sayisi").textContent =
                 new Set(data.map(x => x.departman ?? x.Departman).filter(Boolean)).size;
             document.getElementById("ik_isyeri_sayisi").textContent =
-                new Set(data.map(x => x.isyeriKodu ?? x.IsyeriKodu.toggle).filter(Boolean)).size;
+                new Set(data.map(x => x.isyeriKodu ?? x.IsyeriKodu).filter(Boolean)).size;
 
-            const yaslar = data.map(x => Number(x.yas ?? x.Yas ?? 0)).filter(x => x > 0 && !Number.isNaN(x));
+            const yaslar = data.map(x => Number(x.yas ?? x.Yas)).filter(x => x > 0);
             const ort = yaslar.length ? yaslar.reduce((a, b) => a + b, 0) / yaslar.length : 0;
             document.getElementById("ik_yas_ort").textContent = ort ? ort.toFixed(1) : "-";
         }
@@ -216,20 +217,20 @@
         function departmanDoldur(data) {
             const el = document.getElementById("ik_departman");
             const deps = [...new Set(data.map(x => x.departman ?? x.Departman).filter(Boolean))]
-                .sort((a, b) => a.localeCompare(b));
-            el.innerHTML = `<option value="">Tümü</option>` + deps.map(d => `<option value="${d}">${d}</option>`).join("");
+                .sort((a, b) => a.localeCompare(b, "tr"));
+            el.innerHTML = `<option value="">Tümü</option>` +
+                deps.map(d => `<option value="${d}">${d}</option>`).join("");
         }
 
         function tablo(data) {
-            const tb = document.getElementById("ik_tbody");
-            tb.innerHTML = data.map(x => `
+            document.getElementById("ik_tbody").innerHTML = data.map(x => `
         <tr>
           <td>${x.no ?? x.No ?? ""}</td>
           <td>${x.adSoyad ?? x.AdSoyad ?? ""}</td>
           <td>${x.isyeriKodu ?? x.IsyeriKodu ?? ""}</td>
           <td>${x.departman ?? x.Departman ?? ""}</td>
           <td>${x.pozisyon ?? x.Pozisyon ?? ""}</td>
-          <td>${x.grupKoduIk ?? x.GrupKoduIk ?? x.grupKodu ?? x.GrupKodu ?? ""}</td>
+          <td>${x.grupKoduIk ?? x.GrupKoduIk ?? x.grupKodu ?? ""}</td>
           <td>${fmt(x.ilkIseGirisTarihi ?? x.IlkIseGirisTarihi)}</td>
           <td>${x.yas ?? x.Yas ?? ""}</td>
           <td>${x.telefon ?? x.Telefon ?? ""}</td>
@@ -240,19 +241,11 @@
         function filtrele() {
             const q = n(document.getElementById("ik_ara").value);
             const dep = document.getElementById("ik_departman").value;
+
             let d = ikVeri;
             if (dep) d = d.filter(x => (x.departman ?? x.Departman) === dep);
-            if (q) {
-                d = d.filter(x => {
-                    const blob = [
-                        x.no, x.No, x.tc, x.Tc, x.adSoyad, x.AdSoyad,
-                        x.isyeriKodu, x.IsyeriKodu, x.departman, x.Departman,
-                        x.pozisyon, x.Pozisyon, x.grupKodu, x.GrupKodu,
-                        x.grupKoduIk, x.GrupKoduIk, x.telefon, x.Telefon
-                    ].map(n).join(" ");
-                    return blob.includes(q);
-                });
-            }
+            if (q) d = d.filter(x => JSON.stringify(x).toLowerCase().includes(q));
+
             setDurum(`${d.length} kayıt`);
             tablo(d);
         }
@@ -261,8 +254,9 @@
             try {
                 setDurum("Çekiliyor...");
                 const r = await fetch(IK_ENDPOINT);
-                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                if (!r.ok) throw new Error(r.status);
                 ikVeri = await r.json();
+
                 ozet(ikVeri);
                 departmanDoldur(ikVeri);
                 grafikler(ikVeri);
@@ -276,6 +270,7 @@
         document.getElementById("ik_yenile").addEventListener("click", yukle);
         document.getElementById("ik_ara").addEventListener("input", filtrele);
         document.getElementById("ik_departman").addEventListener("change", filtrele);
+
 
         yukle();
     </script>

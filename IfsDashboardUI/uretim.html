@@ -14,7 +14,7 @@
     <div class="topbar">
         <div class="brand">
             <div class="title">MEKA: Kırma Eleme ve Beton Santrali Teknolojileri</div>
-            <div class="sub">Üretim | Sevkiyatlar (IFS Oracle)</div>
+            <div class="sub">Üretim | Canlı veri (IFS Oracle)</div>
         </div>
 
         <div class="filters">
@@ -31,7 +31,7 @@
         </div>
     </div>
 
-    <!-- NAV sadece 1 kere -->
+
     <div class="nav-wrap">
         <div class="nav">
             <a href="anadashboard.html">PDKS-İşçilik</a>
@@ -251,10 +251,10 @@
             }
         }
 
-// default tarih: son 1 yıl
-const today = new Date();
-document.getElementById("bitis").value = toISODate(today);
-document.getElementById("baslangic").value = toISODate(new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()));
+        // default tarih: son 1 yıl istege göre açılabilir
+        /* const today = new Date();
+         document.getElementById("bitis").value = toISODate(today);
+         document.getElementById("baslangic").value = toISODate(new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()));*/
 
         document.getElementById("btnYenile").addEventListener("click", () => {
             sevkiyatlariYukle();

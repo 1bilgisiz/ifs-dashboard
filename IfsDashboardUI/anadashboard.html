@@ -5,7 +5,6 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>IFS Dashboard</title>
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -19,26 +18,25 @@
 
         <div class="filters">
             <label>
-                Başlangıç
+                Başlangıç Tarihi :
                 <input id="baslangic" type="date" />
             </label>
             <label>
-                Bitiş
+                Bitiş Tarihi :
                 <input id="bitis" type="date" />
             </label>
             <button id="btnYenile">Yenile</button>
             <span id="durum" class="status"></span>
         </div>
     </div>
-
-    <div class="nav">
-        <a href="anadashboard.html" class="active">PDKS-İşçilik</a>
-        <a href="uretim.html">Üretim</a>
-        <a href="ik.html" class="">İnsan Kaynakları</a>
+    <div class="nav-wrap">
+        <div class="nav">
+            <a href="anadashboard.html" class="active">PDKS-İşçilik</a>
+            <a href="uretim.html">Üretim</a>
+            <a href="ik.html">İnsan Kaynakları</a>
+        </div>
     </div>
-
     <div class="container">
-        <!-- KPIs -->
         <div class="kpi-row">
             <div class="kpi">
                 <div class="label">Toplam PDKS Saat</div>
@@ -56,14 +54,14 @@
                 <div class="hint">Seçili tarih aralığı</div>
             </div>
             <div class="kpi">
-                <div class="label">Work Center Sayısı</div>
+                <div class="label">İş Merkezi Sayısı</div>
                 <div id="kpiWorkCenter" class="value">-</div>
-                <div class="hint">İşçilik datasından</div>
+                <div class="hint">İşçilik sürelerinden</div>
             </div>
         </div>
 
         <div class="grid">
-            <!-- Left big charts -->
+
             <div class="card">
                 <div class="card-header">
                     <div>
@@ -76,8 +74,6 @@
                     <canvas id="chartGunlukPdks"></canvas>
                 </div>
             </div>
-
-            <!-- Right -->
             <div class="split">
                 <div class="card">
                     <div class="card-header">
@@ -112,16 +108,15 @@
                 <div class="card-header">
                     <div>
                         <div class="card-title">Notlar</div>
-                        <div class="card-sub">Özet / Hata</div>
+                        <div class="card-sub">Özet / Hatalar</div>
                     </div>
-                    <span class="pill">Durum</span>
                 </div>
 
                 <div id="notlar" class="status status-compact">
-                    ✅ PDKS + İşçilik ayrı endpoint<br />
+                    ✅ PDKS + İşçilik ayrı sorgulardan geliyor<br />
                     🔎 İşçilik tarih bazlı<br />
-                    ⚠️ Sadece MEKA 1-4, ESK<br />
-                    📊 PDKS düz / İşçilik kesikli
+                    ⚠️ Sadece MEKA 1/2/3/4/ESK<br />
+                    📊 PDKS düz çizgi / İşçilik kesikli çizgi
                 </div>
             </div>
         </div>
@@ -364,10 +359,10 @@
             }
         }
 
-        // default tarih: son 15 gün
+        /* default tarih: son 15 gün  istege göre sonra açabiliriz
         const today = new Date();
         document.getElementById("bitis").value = toISODate(today);
-        document.getElementById("baslangic").value = toISODate(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 14));
+        document.getElementById("baslangic").value = toISODate(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 14));*/
 
         document.getElementById("btnYenile").addEventListener("click", yenile);
         yenile();
