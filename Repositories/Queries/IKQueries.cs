@@ -2,7 +2,7 @@ namespace IfsDashboardApi.Repositories.Queries;
 
 public static class IKQueries
 {
-    public const string AktifPersonelListesi = @"
+  public const string AktifPersonelListesi = @"
 SELECT a.company_id sirket,
        a.cf$_isyeri_kodu isyeri_kodu,
        a.person_id no,

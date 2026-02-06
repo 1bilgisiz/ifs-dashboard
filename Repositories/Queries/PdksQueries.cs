@@ -26,7 +26,7 @@ public static class PdksQueries
                 GROUP BY p.emp_no, c.employee_name, NVL(c.cf$_isyeri_kodu, 'Bilinmiyor'), TO_CHAR(p.tarih,'DD.MM.YYYY')
         ";
 
-   
-    
-   
+
+
+
 }
